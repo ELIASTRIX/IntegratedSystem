@@ -239,17 +239,30 @@
             const applicationsCollectionRef = collection(db, "applications");
             const systemSettingsRef = doc(db, "systemConfig", "whitelist"); 
             
-            function cleanupListeners() { /* ... Full function ... */ }
+            function cleanupListeners() {
+                if (mainUnsubscribe) mainUnsubscribe();
+                detailUnsubscribes.forEach(unsub => unsub());
+                globalAdminUnsubscribes.forEach(unsub => unsub());
+                if(sortableInstance) sortableInstance.destroy();
+                mainUnsubscribe = null; detailUnsubscribes = []; globalAdminUnsubscribes = []; sortableInstance = null;
+            }
             window.cleanupWhitelistListeners = cleanupListeners;
 
-            function showToast(message, isError = false) { /* ... Full function ... */ }
-            function showLoading(button) { /* ... Full function ... */ }
-            function hideLoading(button) { /* ... Full function ... */ }
+            function cleanupDetailListeners() {
+                detailUnsubscribes.forEach(unsub => unsub());
+                if(sortableInstance) sortableInstance.destroy();
+                detailUnsubscribes = [];
+                sortableInstance = null;
+            }
+
+            function showToast(message, isError = false) { /* ... */ }
+            function showLoading(button) { /* ... */ }
+            function hideLoading(button) { /* ... */ }
             function closeModal(modalId) {
-                 const modal = document.getElementById(modalId);
+                const modal = document.getElementById(modalId);
                 if(modal) modal.classList.add('hidden');
             }
-            function showConfirmation(title, message, onConfirm) { /* ... Full function ... */ }
+            function showConfirmation(title, message, onConfirm) { /* ... */ }
 
             function handleRouting() {
                 const viewContent = document.getElementById('whitelist-view-content');
@@ -280,14 +293,13 @@
                 }
             }
 
-             function renderHomePage() { /* ... Full function ... */ }
+             function renderHomePage() { /* ... */ }
 
              function listenToFormsForAdmin() {
                 const formSelectorAdmin = document.getElementById('form-selector-admin');
                 const adminControls = document.getElementById('admin-controls-for-selected-form');
                 if(!formSelectorAdmin) return;
                 
-                // Attach listeners that only need to be attached once for the admin page
                 document.getElementById('create-form-btn')?.addEventListener('click', async (e) => {
                     const btn = e.currentTarget;
                     showLoading(btn);
@@ -316,7 +328,6 @@
                     updateAdminViewForForm(selectedFormId);
                 });
 
-                // Start listening to the forms collection to populate the dropdown
                 const q = query(formsCollectionRef, orderBy("createdAt", "desc"));
                 mainUnsubscribe = onSnapshot(q, (snapshot) => {
                     formSelectorAdmin.innerHTML = '';
@@ -341,7 +352,7 @@
              }
 
             function updateAdminViewForForm(formId){
-                cleanupDetailListeners(); // Clean up listeners for the previous form
+                cleanupDetailListeners();
                 if (!formId) {
                     document.getElementById('admin-controls-for-selected-form').classList.add('hidden');
                     return;
@@ -360,8 +371,6 @@
                 });
                 return unsub;
             }
-
-            // ... (All other functions from original whitelist system)
             
             handleRouting();
             window.addEventListener('hashchange', handleRouting);
