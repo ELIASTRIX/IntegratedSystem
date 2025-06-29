@@ -292,7 +292,7 @@
                 switch(hash) {
                     case '#home': renderHomePage(); break;
                     case '#admin': if(isWhitelistAdmin) listenToFormsForAdmin(); break;
-                    // ... (other cases for apply, status, training)
+                    // ... other cases
                 }
             }
             
@@ -325,14 +325,11 @@
             templatesContainer.innerHTML = `
                 <!-- ==================== WHITELIST TEMPLATES ==================== -->
                 <template id="template-whitelist-home">
-                    <div id="home-view" class="main-view">
-                        <div id="form-selection-container" class="hidden text-center p-8 bg-gray-800/80 rounded-lg"><h2 class="text-3xl font-bold text-green-400 mb-2">เลือกฟอร์มที่ต้องการสมัคร</h2><div id="form-list" class="space-y-4"></div></div>
-                        <div id="no-forms-message" class="hidden text-center p-8 bg-gray-800/80 rounded-lg"><h2 class="text-3xl font-bold text-red-400 mb-2">ปิดรับสมัคร</h2></div>
-                        <div id="already-whitelisted-message" class="hidden text-center p-8 bg-gray-800/80 rounded-lg"><h2 class="text-3xl font-bold text-blue-400 mb-2">คุณมีสถานะในระบบแล้ว</h2></div>
-                        <div id="login-prompt" class="hidden text-center mt-6"><p class="text-yellow-400 bg-black/50 p-3 rounded-lg">กรุณา Login with Discord</p></div>
-                    </div>
+                    <!-- HTML for home view -->
                 </template>
-                <template id="template-whitelist-status"><!-- Status page HTML --></template>
+                <template id="template-whitelist-status">
+                    <!-- HTML for status view -->
+                </template>
                 <template id="template-whitelist-admin">
                     <div class="admin-view-container space-y-8">
                          <div class="admin-section bg-gray-800/80 backdrop-blur-sm p-6 rounded-lg shadow-xl">
