@@ -37,7 +37,7 @@
         .management-system-container .sidebar-profile-pic { width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid var(--theme-color-primary); }
         .management-system-container .theme-text { color: var(--theme-color-primary) !important; }
         .management-system-container .form-control, .management-system-container .form-select { background-color: #1a2541 !important; color: #FFFFFF !important; border-color: #4a5568 !important; }
-        #whitelist-modals-container .modal, #toast-container { transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .modal, #toast-container { transition: opacity 0.3s ease, visibility 0.3s ease; }
         .loader { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
         .btn-spinner { animation: spinner 0.8s linear infinite; border-top-color: white; border-right-color: transparent; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -78,7 +78,7 @@
 
     <!-- This div will hold all HTML templates and modals -->
     <div id="templates" class="hidden">
-        <!-- All templates will be populated here -->
+        <!-- All templates will be populated by JS -->
     </div>
 
 
@@ -115,6 +115,7 @@
         const loadingSpinner = document.getElementById('loading-spinner');
         const whitelistWrapper = document.getElementById('whitelist-system-wrapper');
         const managementWrapper = document.getElementById('management-system-wrapper');
+        const templatesContainer = document.getElementById('templates');
 
         // --- AUTHENTICATION LOGIC ---
         const discordProvider = new OAuthProvider('oidc.discord');
@@ -217,16 +218,23 @@
             let applicationsCurrentPage = 1;
             let allPlayersCurrentPage = 1;
             const ITEMS_PER_PAGE = 5;
-
-            // Inject the initial HTML structure
-            const templateContainer = document.getElementById('templates');
-            const homeTemplate = templateContainer.querySelector('#template-whitelist-home');
-            if (homeTemplate) {
-                 whitelistWrapper.innerHTML = homeTemplate.innerHTML;
-            } else {
-                console.error("Whitelist home template not found!");
-                return;
-            }
+            
+            // Inject the static HTML structure for the whitelist system
+            whitelistWrapper.innerHTML = `
+                <header class="text-center mb-8 pt-16 md:pt-0">
+                    <img src="https://i.imgur.com/8a3eN2u.png" alt="โลโก้ Mystic University" class="mx-auto mb-4 rounded-full border-4 border-purple-500 shadow-lg w-36 h-36">
+                    <h1 class="text-4xl md:text-5xl font-bold text-purple-400 tracking-wider" style="font-family: 'EB Garamond', serif;">Mystic University</h1>
+                    <p class="text-gray-400 text-lg">เซิร์ฟเวอร์ Roleplay แห่งจินตนาการ</p>
+                </header>
+                <nav id="whitelist-nav" class="flex justify-center space-x-4 mb-8 bg-gray-800/80 backdrop-blur-sm p-3 rounded-lg shadow-md">
+                    <a href="#home" class="nav-link px-4 py-2 rounded-md hover:bg-purple-600">หน้าหลัก</a>
+                    <a href="#status" class="nav-link px-4 py-2 rounded-md hover:bg-purple-600">ตรวจสอบสถานะ</a>
+                    <a href="#admin" id="admin-nav-link" class="nav-link px-4 py-2 rounded-md hover:bg-purple-600 hidden">สำหรับแอดมิน</a>
+                </nav>
+                <div id="whitelist-view-content">
+                    <!-- Dynamic view content will be injected here -->
+                </div>
+            `;
 
             const formsCollectionRef = collection(db, "forms");
             const applicationsCollectionRef = collection(db, "applications");
@@ -236,71 +244,66 @@
             window.cleanupWhitelistListeners = cleanupListeners;
 
             function showToast(message, isError = false) { /* ... */ }
-            function showLoading(button) { /* ... */ }
-            function hideLoading(button) { /* ... */ }
-            function closeModal() { /* ... */ }
-            function showConfirmation(title, message, onConfirm) { /* ... */ }
 
             function handleRouting() {
+                const viewContent = document.getElementById('whitelist-view-content');
+                if (!viewContent) return;
+
                 const hash = window.location.hash.split('?')[0] || '#home';
-                document.querySelectorAll('#whitelist-system-wrapper .main-view').forEach(v => v.classList.add('hidden'));
                 
                 const navLinks = document.querySelectorAll('#whitelist-nav .nav-link');
                 navLinks.forEach(l => {
                     l.classList.remove('bg-purple-700', 'font-bold');
-                    if (l.getAttribute('href') === hash) {
-                        l.classList.add('bg-purple-700', 'font-bold');
-                    }
+                    if (l.getAttribute('href') === hash) l.classList.add('bg-purple-700', 'font-bold');
                 });
 
                 document.getElementById('admin-nav-link')?.classList.toggle('hidden', !isWhitelistAdmin);
                 if (hash === '#admin' && !isWhitelistAdmin) { window.location.hash = '#home'; return; }
                 
-                 let activeViewId;
-                const activeViewWrapper = document.getElementById('whitelist-system-wrapper');
-                const viewTemplate = templateContainer.querySelector(`#template-whitelist-${hash.substring(1)}`);
-                
+                const viewTemplate = templatesContainer.querySelector(`#template-whitelist-${hash.substring(1)}`);
                 if (viewTemplate) {
-                     activeViewWrapper.innerHTML = viewTemplate.innerHTML;
+                     viewContent.innerHTML = viewTemplate.innerHTML;
                 } else {
-                    activeViewWrapper.innerHTML = homeTemplate.innerHTML;
+                    const homeTemplate = templatesContainer.querySelector('#template-whitelist-home');
+                    if (homeTemplate) viewContent.innerHTML = homeTemplate.innerHTML;
                 }
 
-                // Additional logic after rendering view
                 const params = new URLSearchParams(window.location.hash.split('?')[1]);
                  switch(hash) {
-                    case '#apply':
-                        const formId = params.get('formId');
-                        const editAppId = params.get('editAppId');
-                        if (formId) { /* renderApplicationPage(formId, editAppId); */ }
-                        break;
+                    case '#home': renderHomePage(); break;
                     // ... other cases
                 }
             }
 
             async function renderHomePage() {
-                if (!currentUser) return;
+                if (!currentUser) {
+                    document.getElementById('login-prompt')?.classList.remove('hidden');
+                    return;
+                };
+
                 const formSelectionContainer = document.getElementById('form-selection-container');
                 const noFormsMessage = document.getElementById('no-forms-message');
                 const formList = document.getElementById('form-list');
+                const alreadyWhitelistedMessage = document.getElementById('already-whitelisted-message');
+                
+                if (isUserWhitelisted) {
+                    alreadyWhitelistedMessage?.classList.remove('hidden');
+                    return;
+                }
 
-                const qOpen = query(formsCollectionRef);
+                const qOpen = query(formsCollectionRef, where("isOpen", "==", true));
                 const openFormsSnapshot = await getDocs(qOpen);
                 
                 let availableForms = [];
-                for (const formDoc of openFormsSnapshot.docs) {
+                 for (const formDoc of openFormsSnapshot.docs) {
                     const formData = formDoc.data();
                     const now = new Date();
                     const openAt = formData.openAt?.toDate();
                     const closeAt = formData.closeAt?.toDate();
-
                     let isTimeGateOpen = true;
                     if (openAt && now < openAt) isTimeGateOpen = false;
                     if (closeAt && now > closeAt) isTimeGateOpen = false;
-
-                    if (formData.isOpen && isTimeGateOpen) {
-                        availableForms.push({ id: formDoc.id, ...formData });
-                    }
+                    if (isTimeGateOpen) availableForms.push({ id: formDoc.id, ...formData });
                 }
                 
                 if (formList) {
@@ -322,20 +325,6 @@
                 }
             }
             
-            if(currentUser) {
-                 if(!isUserWhitelisted) {
-                    document.getElementById('already-whitelisted-message')?.classList.add('hidden');
-                    renderHomePage();
-                 } else {
-                     document.getElementById('already-whitelisted-message')?.classList.remove('hidden');
-                     document.getElementById('form-selection-container')?.classList.add('hidden');
-                     document.getElementById('no-forms-message')?.classList.add('hidden');
-                 }
-                 document.getElementById('status-login-prompt')?.classList.add('hidden');
-                 document.getElementById('status-display')?.classList.remove('hidden');
-            } else {
-                document.getElementById('login-prompt')?.classList.remove('hidden');
-            }
             handleRouting();
             window.addEventListener('hashchange', handleRouting);
         }
@@ -358,7 +347,7 @@
             
             renderView(viewName) {
                 this.cleanupListeners();
-                const template = document.getElementById('templates').querySelector(`#template-${viewName}`);
+                const template = templatesContainer.querySelector(`#template-${viewName}`);
                 if (template) {
                     this.root.innerHTML = '';
                     this.root.classList.add('management-system-container');
@@ -377,21 +366,9 @@
         
         // --- PRE-LOAD TEMPLATES ---
         (function preloadTemplates() {
-            const templatesDiv = document.getElementById('templates');
-            // Add all your templates here
-            templatesDiv.innerHTML = `
-                <!-- WHITELIST TEMPLATES -->
+            templatesContainer.innerHTML = `
+                <!-- ==================== WHITELIST TEMPLATES ==================== -->
                 <template id="template-whitelist-home">
-                    <header class="text-center mb-8 pt-16 md:pt-0">
-                        <img src="https://i.imgur.com/8a3eN2u.png" alt="โลโก้ Mystic University" class="mx-auto mb-4 rounded-full border-4 border-purple-500 shadow-lg w-36 h-36">
-                        <h1 class="text-4xl md:text-5xl font-bold text-purple-400 tracking-wider" style="font-family: 'EB Garamond', serif;">Mystic University</h1>
-                        <p class="text-gray-400 text-lg">เซิร์ฟเวอร์ Roleplay แห่งจินตนาการ</p>
-                    </header>
-                    <nav id="whitelist-nav" class="flex justify-center space-x-4 mb-8 bg-gray-800/80 backdrop-blur-sm p-3 rounded-lg shadow-md">
-                        <a href="#home" class="nav-link px-4 py-2 rounded-md hover:bg-purple-600">หน้าหลัก</a>
-                        <a href="#status" class="nav-link px-4 py-2 rounded-md hover:bg-purple-600">ตรวจสอบสถานะ</a>
-                        <a href="#admin" id="admin-nav-link" class="nav-link px-4 py-2 rounded-md hover:bg-purple-600 hidden">สำหรับแอดมิน</a>
-                    </nav>
                     <div id="home-view" class="main-view">
                         <div id="form-selection-container" class="hidden text-center p-8 bg-gray-800/80 rounded-lg"><h2 class="text-3xl font-bold text-green-400 mb-2">เลือกฟอร์มที่ต้องการสมัคร</h2><div id="form-list" class="space-y-4"></div></div>
                         <div id="no-forms-message" class="hidden text-center p-8 bg-gray-800/80 rounded-lg"><h2 class="text-3xl font-bold text-red-400 mb-2">ปิดรับสมัคร</h2></div>
@@ -402,7 +379,7 @@
                 <template id="template-whitelist-status"><!-- Status page HTML --></template>
                 <template id="template-whitelist-admin"><!-- Admin page HTML --></template>
                 
-                <!-- MANAGEMENT TEMPLATES -->
+                <!-- =================== MANAGEMENT TEMPLATES =================== -->
                 <template id="template-main">
                     <div class="d-flex vh-100">
                         <nav id="sidebar" class="d-flex flex-column p-4" style="width: 280px; background-color: #040814;">
